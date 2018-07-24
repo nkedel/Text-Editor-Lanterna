@@ -14,4 +14,13 @@ Command Line Text Editor made in Java using Lanterna, a console text GUI library
 ## Authors:
 
 João Sá <br>
-Diogo Fernandes
+Diogo Fernandes 
+
+Lanterna-3.0.1 compatibility PR by Nate Edel (@nkedel)
+
+## Changelog
+* added gradle build script
+* added license.txt warning re: lack of a license
+* updated lanterna to 3.0.1
+* not-yet working changes for Lanterna 3 compatibility
+

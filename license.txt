@@ -1,0 +1,19 @@
+The original repository https://github.com/joaomouraosa/Text-Editor-Lanterna
+was not provided with a license, and this code is presumably copyright the
+authors João Sá and Diogo Fernandes. 
+
+Since the code was posted publicly to github, I assume it is free to use for
+purely personal or educational use, but should not be redistributed or
+combined with any other files until/unless the original authors post a
+license allowing it.
+
+My changes to the original files are contributed back to the original
+authors to license (or not) as they see fit.
+
+My contributed files (at present, only the gradle build script, but if I
+forget to update this, they will be marked at the top of the file) are
+licensed subject to the terms of the Mozilla Public License, v.  2.0.  If a
+copy of the MPL was not distributed with this file, You can obtain one at
+http://mozilla.org/MPL/2.0/.
+
+- Nate Edel
