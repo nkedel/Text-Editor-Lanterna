@@ -1,10 +1,7 @@
-public class Edit {
+package com.example;
 
-    enum EditOp {
-        INSERT, DELETE
-    }
-
-    public EditOp op;
+class Edit {
+    EditOp op;
     private int cursorRow, cursorCol;
     private char c;
 
@@ -15,16 +12,19 @@ public class Edit {
         this.cursorRow = cursorRow;
     }
 
-    public int getCursorRow(){
+    int getCursorRow() {
         return cursorRow;
     }
 
-    public int getCursorCol() {
+    int getCursorCol() {
         return cursorCol;
     }
 
-    public char getChar() {
+    char getChar() {
         return c;
     }
 
+    enum EditOp {
+        INSERT, DELETE
+    }
 }

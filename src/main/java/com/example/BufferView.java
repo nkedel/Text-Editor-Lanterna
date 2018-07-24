@@ -1,78 +1,75 @@
-import com.googlecode.lanterna.TerminalFacade;
-import com.googlecode.lanterna.input.Key;
+package com.example;
+
+import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.input.KeyType;
+import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
-import javafx.geometry.Pos;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 
-public class BufferView
-{
+public class BufferView {
     private Terminal term;
     private int width;
     private int height;
-    private Position origin=new Position(0,0);
-    private Position cursorPos = new Position(0,0);
-    private int startRow=0,startCol=0;
-    private ArrayList<Integer> modifiedLines;
+    private Position origin = new Position(0, 0);
+    private Position cursorPos = new Position(0, 0);
+    private int startRow = 0, startCol = 0;
+    private List<Integer> modifiedLines;
     private FileBuffer buffer;
 
-    public BufferView(FileBuffer b) throws IOException{
-
+    BufferView(FileBuffer b) throws IOException {
         buffer = b;
-        term = TerminalFacade.createTerminal();
+        term = new DefaultTerminalFactory().createTerminal();
         term.enterPrivateMode();
         height = term.getTerminalSize().getRows();
         width = term.getTerminalSize().getColumns();
 
-        modifiedLines = new ArrayList<Integer>();
+        modifiedLines = new ArrayList<>();
         startBufferView();
     }
 
-    public BufferView() throws IOException
-    {
-        term = TerminalFacade.createTerminal();
+    public BufferView() throws IOException {
+        term = new DefaultTerminalFactory().createTerminal();
         term.enterPrivateMode();
         height = term.getTerminalSize().getRows();
-        width  = term.getTerminalSize().getColumns();
+        width = term.getTerminalSize().getColumns();
         buffer = new FileBuffer();
-        modifiedLines = new ArrayList<Integer>();
+        modifiedLines = new ArrayList<>();
         startBufferView();
     }
 
     private void startBufferView() throws IOException {
 
         term.clearScreen();
-        term.applySGR(Terminal.SGR.ENTER_BOLD);
-        term.applyForegroundColor(Terminal.Color.WHITE);
+//        term.applySGR(Terminal.SGR.ENTER_BOLD);
+//        term.applyForegroundColor(Terminal.Color.WHITE);
         term.flush();
 
         showBuffer();
         Position logical = new Position(buffer.getCursorRow(), buffer.getCursorCol());
         Position visualCursor = viewPos(logical);
+        assert visualCursor != null;
         cursorPos.row = visualCursor.row;
         cursorPos.col = visualCursor.col;
-        term.moveCursor(cursorPos.col, cursorPos.row);
+        term.setCursorPosition(cursorPos.col, cursorPos.row);
 
-        while (true)
-        {
-            Key k= term.readInput();
-            if (k!=null) {
+        while (true) {
+            KeyStroke k = term.readInput();
+            if (k != null) {
 
-                if (k.getKind() == Key.Kind.Escape) {
+                if (k.getKeyType() == KeyType.Escape) {
                     term.exitPrivateMode();
                     return;
                 }
 
-                editBuffer(term,k);
+                editBuffer(term, k);
             }
-            try
-            {
+            try {
                 Thread.sleep(100);
-            }
-            catch (InterruptedException ie)
-            {
+            } catch (InterruptedException ie) {
                 ie.printStackTrace();
             }
         }
@@ -82,20 +79,19 @@ public class BufferView
         Position visualPos = new Position(0, 0);
 
         for (int i = startRow; i < logical.row; i++) {
-            if (buffer.getLine(i).length() != 0) { //linha nao vazia
-                if (i == startRow) {
-                    //se a primeira linha nao for vazia
-                    // apenas considerar o espaço que os carateres ocupam a partir do startCol
-                    visualPos.row += (int) Math.ceil((double) (buffer.getLine(i).length() - startCol) / (double) width);
-                } else {
-                    visualPos.row += (int) Math.ceil((double) buffer.getLine(i).length() / (double) width);
-                }
-            } else {
+            //linha nao vazia
+            if (buffer.getLine(i).isEmpty()) {
                 visualPos.row += 1;
+            } else if (i == startRow) {
+                // se a primeira linha nao for vazia
+                // apenas considerar o espaço que os carateres ocupam a partir do startCol
+                visualPos.row += (int) Math.ceil((double) (buffer.getLine(i).length() - startCol) / (double) width);
+            } else {
+                visualPos.row += (int) Math.ceil((double) buffer.getLine(i).length() / (double) width);
             }
         }
 
-        if (logical.row == startRow && startCol > 0) {
+        if ((logical.row == startRow) && (startCol > 0)) {
             visualPos.row += ((logical.col - startCol) / width);
         } else {
             visualPos.row += logical.col / width;
@@ -112,7 +108,7 @@ public class BufferView
         return visualPos;
     }
 
-    private void showBuffer() {
+    private void showBuffer() throws IOException {
         Position visualPos;
         Position logical;
 
@@ -131,38 +127,42 @@ public class BufferView
                     return;
                 }
                 buffer.setCursor(logical.row, logical.col + 1); //atualizar cursor logico
-                term.moveCursor(visualPos.col, visualPos.row);
+                term.setCursorPosition(visualPos.col, visualPos.row);
                 term.putCharacter(str.charAt(j));
             }
         }
     }
 
-    private void showBufferLine(int line) {
+    private void showBufferLine(int line) throws IOException {
 
         String str = buffer.getLine(line);
-        Position logical = new Position(line,0);
+        Position logical = new Position(line, 0);
         Position visualPos = viewPos(logical);
 
+        assert visualPos != null;
         int col = visualPos.col;
         int row = visualPos.row;
 
-        term.moveCursor(col,row);
+        term.setCursorPosition(col, row);
 
-        for (int i=0;i<=str.length();i++) {
-            if (i%width==0)
-                term.moveCursor(0, visualPos.row++);
+        for (int i = 0; i <= str.length(); i++) {
+            if ((i % width) == 0)
+                term.setCursorPosition(0, visualPos.row++);
             term.putCharacter(' ');
         }
 
-        term.moveCursor(col,row);
-        for (int i=0;i<str.length();i++) {
-            if (i%width==0)
-            term.putCharacter(str.charAt(i));
+        term.setCursorPosition(col, row);
+        for (int i = 0; i < str.length(); i++) {
+            if ((i % width) == 0)
+                term.putCharacter(str.charAt(i));
         }
     }
 
-    private void moveUp() {
-        if ( !(buffer.getCursorRow()==0 && cursorPos.row==0 && buffer.getCursorCol()>=0 && buffer.getCursorCol()<width)) {
+    private void moveUp() throws IOException {
+        if (!((buffer.getCursorRow() == 0)
+                && (cursorPos.row == 0)
+                && (buffer.getCursorCol() >= 0)
+                && (buffer.getCursorCol() < width))) {
             if (buffer.getCursorCol() >= width) { //linha de cima pertence a mesma linha logica
                 buffer.setCursor(buffer.getCursorRow(), buffer.getCursorCol() - width);
             } else {
@@ -179,16 +179,16 @@ public class BufferView
             }
         }
 
-        if ( (startRow>0 || (startRow==0 && startCol>0)) && cursorPos.row==0) {
-            if(buffer.getCursorRow() == startRow){
-                startCol-=width;
-            }
-            else {
-                float upLine_size=buffer.getLine(startRow-1).length();
-                float n=upLine_size/width; //linhas visuais que a linha logica acima da startRow ocupa
+        if (((startRow > 0) || ((startRow == 0) && (startCol > 0)))
+                && (cursorPos.row == 0)) {
+            if (buffer.getCursorRow() == startRow) {
+                startCol -= width;
+            } else {
+                float upLine_size = buffer.getLine(startRow - 1).length();
+                float n = upLine_size / width; //linhas visuais que a linha logica acima da startRow ocupa
                 float fractional_part = n - (int) n;
                 float last_visual_line_size = fractional_part * width; //carateres na ultima linha visual
-                float coluna_inicio_ultima_linha = buffer.getLine(startRow-1).length() - last_visual_line_size;
+                float coluna_inicio_ultima_linha = buffer.getLine(startRow - 1).length() - last_visual_line_size;
 
                 startRow--;
                 startCol = (int) coluna_inicio_ultima_linha;
@@ -201,54 +201,52 @@ public class BufferView
         }
     }
 
-    private void moveDown() {
+    private void moveDown() throws IOException {
         int row = buffer.getCursorRow();
         int col = buffer.getCursorCol();
         int lineLength = buffer.getLine(row).length();
-        Position logical1 = new Position(buffer.getCursorRow(),buffer.getCursorCol());
-        Position visual1  = viewPos(logical1);
+        Position logical1 = new Position(buffer.getCursorRow(), buffer.getCursorCol());
+        Position visual1 = viewPos(logical1);
 
-        if (visual1.row==height-1 ){
+        assert visual1 != null;
+        if (visual1.row == (height - 1)) {
             startRow++;
         }
-        if ((col+width) < lineLength) {
-            buffer.setCursor(row,col+width);
-        }
-        else {
+        if ((col + width) < lineLength) {
+            buffer.setCursor(row, col + width);
+        } else {
 
-            Position logical2 = new Position(buffer.getCursorRow(),lineLength);
-            Position visual2  = viewPos(logical2);
-
-
-            if ((lineLength-col < width) && (visual1.row < visual2.row)) { //vai para o final da linha logica
+            Position logical2 = new Position(buffer.getCursorRow(), lineLength);
+            Position visual2 = viewPos(logical2);
+            assert visual2 != null;
+            if (((lineLength - col) < width) && (visual1.row < visual2.row)) { //vai para o final da linha logica
                 col = lineLength;
                 buffer.setCursor(row, col);
-            }
-            else if (buffer.getLineList().size()-1>buffer.getCursorRow()){ //muda de linha logica
+            } else if ((buffer.getLineList().size() - 1) > buffer.getCursorRow()) { //muda de linha logica
                 while (col >= width) {
                     col -= width;
                 }
-                if (buffer.getLine(row+1).length()<col)
-                    col = buffer.getLine(row+1).length();
+                if (buffer.getLine(row + 1).length() < col)
+                    col = buffer.getLine(row + 1).length();
                 buffer.setCursor(row + 1, col);
             }
         }
-        if (visual1.row==height-1 ){
+        if (visual1.row == (height - 1)) {
             int tempRow = buffer.getCursorRow();
             int tempCol = buffer.getCursorCol();
             term.clearScreen();
             showBuffer();
-            buffer.setCursor(tempRow,tempCol);
+            buffer.setCursor(tempRow, tempCol);
         }
 
     }
 
-    private void moveRight() {
-        Position initialPos=new Position(buffer.getCursorRow(),buffer.getCursorCol());
-        int tamanho_linha_logica=buffer.getLine(buffer.getCursorRow()).length();
+    private void moveRight() throws IOException {
+        Position initialPos = new Position(buffer.getCursorRow(), buffer.getCursorCol());
+        int tamanho_linha_logica = buffer.getLine(buffer.getCursorRow()).length();
         buffer.moveRight();
 
-        if (startRow!=buffer.getNumberOfLines()-1 && cursorPos.row==height-1 && (initialPos.col==tamanho_linha_logica || cursorPos.col==width-1)) {
+        if ((startRow != (buffer.getNumberOfLines() - 1)) && (cursorPos.row == (height - 1)) && ((initialPos.col == tamanho_linha_logica) || (cursorPos.col == (width - 1)))) {
             double startRow_size = buffer.getLine(startRow).length();
             double n = startRow_size / width; //linhas visuais que a linha logica startRow ocupa
 
@@ -276,146 +274,125 @@ public class BufferView
         }
     }
 
-    private void moveLeft() {
+    private void moveLeft() throws IOException {
         buffer.moveLeft();
 
-        if ( (startRow>0 || (startRow==0 && startCol>0)) && cursorPos.row==0 && cursorPos.col==0) {
-            if( startRow==buffer.getCursorRow() ) {
-                startCol-= width;
-            }
-            else {
-                double upLine_size=buffer.getLine(startRow-1).length();
-                double n=upLine_size/width; //linhas visuais que a linha logica acima da startRow ocupa
+        if (((startRow > 0) || ((startRow == 0) && (startCol > 0)))
+                && (cursorPos.row == 0) && (cursorPos.col == 0)) {
+            if (startRow == buffer.getCursorRow()) {
+                startCol -= width;
+            } else {
+                double upLine_size = buffer.getLine(startRow - 1).length();
+                double n = upLine_size / width; //linhas visuais que a linha logica acima da startRow ocupa
                 double fractional_part = n - (int) n;
                 double last_visual_line_size = fractional_part * width; //carateres na ultima linha visual
-                double coluna_inicio_ultima_linha = buffer.getLine(startRow-1).length() - last_visual_line_size;
+                double coluna_inicio_ultima_linha = buffer.getLine(startRow - 1).length() - last_visual_line_size;
 
                 startRow--;
                 startCol = (int) coluna_inicio_ultima_linha;
             }
             term.clearScreen();
-            Position backup=new Position(buffer.getCursorRow(),buffer.getCursorCol());
+            Position backup = new Position(buffer.getCursorRow(), buffer.getCursorCol());
             showBuffer();
-            buffer.setCursor(backup.row,backup.col);
+            buffer.setCursor(backup.row, backup.col);
         }
     }
 
-    private void editBuffer(Terminal term, Key k)  throws IOException{
+    private void editBuffer(Terminal term, KeyStroke k) throws IOException {
 
-        if (k.getKind()==Key.Kind.ArrowLeft) {
-          moveLeft();
-        }
-        else if (k.getKind()==Key.Kind.ArrowRight) {
+        if (k.getKeyType() == KeyType.ArrowLeft) {
+            moveLeft();
+        } else if (k.getKeyType() == KeyType.ArrowRight) {
             moveRight();
-        }
-        else if (k.getKind()==Key.Kind.ArrowUp) {
+        } else if (k.getKeyType() == KeyType.ArrowUp) {
             moveUp();
-        }
-        else if (k.getKind()==Key.Kind.ArrowDown) {
+        } else if (k.getKeyType() == KeyType.ArrowDown) {
             moveDown();
-        }
-
-        else if (k.getKind()==Key.Kind.Enter) {
+        } else if (k.getKeyType() == KeyType.Enter) {
             buffer.newLine();
             term.clearScreen();
             int row = buffer.getCursorRow();
             int col = buffer.getCursorCol();
-            Position pos = new Position(row,col);
+            Position pos = new Position(row, col);
             Position visual = viewPos(pos);
-            if (visual.row==height-1)
+            assert visual != null;
+            if (visual.row == (height - 1))
                 startRow++;
             showBuffer();
-            buffer.setCursor(row,col);
-        }
-
-        else if (k.getKind()==Key.Kind.Backspace) { //backspace
+            buffer.setCursor(row, col);
+        } else if (k.getKeyType() == KeyType.Backspace) { //backspace
 
             buffer.delete();
             int row = buffer.getCursorRow();
             int col = buffer.getCursorCol();
             term.clearScreen();
             showBuffer();
-            buffer.setCursor(row,col);
-        }
-        else if (k.getKind()==Key.Kind.Escape) { //backspace
+            buffer.setCursor(row, col);
+        } else if (k.getKeyType() == KeyType.Escape) { //backspace
             term.exitPrivateMode();
-        }
-
-        else if (k.isCtrlPressed() && k.getCharacter()=='s')  { //save
+        } else if (k.isCtrlDown() && (k.getCharacter() == 's')) { //save
             buffer.save();
-        }
-
-        else if (k.isCtrlPressed() && k.getCharacter()=='z') { //undo
+        } else if (k.isCtrlDown() && (k.getCharacter() == 'z')) { //undo
             if (buffer.getUndoSize() > 0) {
                 buffer.undo();
                 term.clearScreen();
                 showBuffer();
                 buffer.setCursor(buffer.getUndoRow(), buffer.getUndoCol());
             }
-        }
-        else if(k.isCtrlPressed() && k.getCharacter()=='r'){ //marcar inicio texto
-            buffer.setMark(buffer.getCursorRow(),buffer.getCursorCol());
-        }
-        else if(k.isCtrlPressed() && k.getCharacter()=='c'){ //copy
+        } else if (k.isCtrlDown() && (k.getCharacter() == 'r')) { //marcar inicio texto
+            buffer.setMark(buffer.getCursorRow(), buffer.getCursorCol());
+        } else if (k.isCtrlDown() && (k.getCharacter() == 'c')) { //copy
             buffer.copy();
-        }
-        else if(k.isCtrlPressed() && k.getCharacter()=='x') { //cut
-            Position previousPos=new Position(buffer.getCursorRow(),buffer.getCursorCol());
+        } else if (k.isCtrlDown() && (k.getCharacter() == 'x')) { //cut
+            Position previousPos = new Position(buffer.getCursorRow(), buffer.getCursorCol());
             buffer.cut();
             term.clearScreen();
             showBuffer();
-            buffer.setCursor(previousPos.row,previousPos.col);
-        }
-        else if(k.isCtrlPressed() && k.getCharacter()=='v'){ //paste
-            Position previousPos=new Position(buffer.getCursorRow(),buffer.getCursorCol());
+            buffer.setCursor(previousPos.row, previousPos.col);
+        } else if (k.isCtrlDown() && (k.getCharacter() == 'v')) { //paste
+            Position previousPos = new Position(buffer.getCursorRow(), buffer.getCursorCol());
             buffer.paste();
             term.clearScreen();
             showBuffer();
-            buffer.setCursor(previousPos.row,previousPos.col);
-        }
-        else {
+            buffer.setCursor(previousPos.row, previousPos.col);
+        } else {
             if (!modifiedLines.contains(buffer.getCursorRow()))
                 modifiedLines.add(buffer.getCursorRow());
             buffer.insert(k.getCharacter());
             int row = buffer.getCursorRow();
-            if (row==startRow) {
+            if (row == startRow) {
                 int col = buffer.getCursorCol();
                 term.clearScreen();
                 showBuffer();
                 buffer.setCursor(row, col);
-            }
-            else
-            redraw();
+            } else
+                redraw();
         }
 
-        Position logical=new Position(buffer.getCursorRow(),buffer.getCursorCol());
-        Position visualCursor=viewPos(logical);
-            cursorPos.row = visualCursor.row;
-            cursorPos.col = visualCursor.col;
-            term.moveCursor(cursorPos.col,cursorPos.row);
+        Position logical = new Position(buffer.getCursorRow(), buffer.getCursorCol());
+        Position visualCursor = viewPos(logical);
+        assert visualCursor != null;
+        cursorPos.row = visualCursor.row;
+        cursorPos.col = visualCursor.col;
+        term.setCursorPosition(cursorPos.col, cursorPos.row);
     }
 
-    private void redraw() {
+    private void redraw() throws IOException {
         for (Integer line : modifiedLines) {
             showBufferLine(line);
 
         }
         modifiedLines.clear();
     }
-}
 
-class Position
-{
-    int col;
-    int row;
+    private static class Position {
+        int col;
+        int row;
 
-    Position() {
-        row=0;
-        col=0;
-    }
-
-    Position(int row, int col) {
-        this.row=row;
-        this.col=col;
+        Position(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
     }
 }
+

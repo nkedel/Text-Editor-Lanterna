@@ -1,0 +1,52 @@
+import com.sun.org.apache.xalan.internal.xsltc.cmdline.Compile
+
+group 'com.example'
+version '0.1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.20.0'
+    }
+}
+
+repositories {
+    jcenter()
+}
+
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'application'
+
+mainClassName = 'com.example.TextEditor'
+
+dependencies {
+    compile 'com.googlecode.lanterna:lanterna:3.0.1'
+    testCompile 'junit:junit:4.12'
+}
+
+shadowJar {
+    mergeServiceFiles()
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+}
+
+run {
+    if(project.hasProperty('args')){
+        args project.args.split('\\s+')
+    }
+}
+
